@@ -25,7 +25,6 @@ class Clipsearch(ClamsApp):
         super().__init__()
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
-        self.N = 15  # TODO parameterize
         self.fps: float = 0.0
 
     def _appmetadata(self):
@@ -34,7 +33,7 @@ class Clipsearch(ClamsApp):
         # When using the ``metadata.py`` leave this do-nothing "pass" method here. 
         pass
 
-    def extract_frames(self) -> List[Image]:
+    def extract_frames(self, **kwargs) -> List[Image]:
         """
         Extracts every N-th frame of the video
         :return: List of PIL images for CLIP
@@ -59,17 +58,17 @@ class Clipsearch(ClamsApp):
                 break
 
             # Skip N frames
-            current_frame += self.N
+            current_frame += kwargs.get("sampleRatio")
             capture.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
 
         # Print some statistics
         print(f"Frames extracted: {len(video_frames)}")
         return video_frames
 
-    def encode_frames(self):
+    def encode_frames(self, **kwargs):
         # You can try tuning the batch size for very large videos, but it should usually be OK
         batch_size = 256
-        video_frames = self.extract_frames()
+        video_frames = self.extract_frames(**kwargs)
         batches = math.ceil(len(video_frames) / batch_size)
 
         # The encoded features will bs stored in video_features
@@ -100,19 +99,19 @@ class Clipsearch(ClamsApp):
     def frame_to_time(self, frame_number):
         return frame_number / self.fps
 
-    def search_video(self, search_query, threshold, display_heatmap=True, display_results_count=3):
+    def search_video(self, **kwargs):
         # Encode and normalize the search query using CLIP
         with torch.no_grad():
-            text_features = self.model.encode_text(clip.tokenize(search_query).to(self.device))
+            text_features = self.model.encode_text(clip.tokenize(kwargs.get("search_query")).to(self.device))
             text_features /= text_features.norm(dim=-1, keepdim=True)
 
-        video_features, video_frames = self.encode_frames()
+        video_features, video_frames = self.encode_frames(**kwargs)
 
         # Compute the similarity between the search query and each frame using the Cosine similarity
         similarities = (100.0 * video_features @ text_features.T).squeeze().cpu().numpy()
 
         # Find the frames that meet the threshold
-        above_threshold_indices = np.where(similarities > threshold)[0]
+        above_threshold_indices = np.where(similarities > kwargs.get("threshold"))[0]
 
         timeframes = []
 
@@ -151,7 +150,7 @@ class Clipsearch(ClamsApp):
         #     display(video_frames[frame_id])
         #
         #     # Find the timestamp in the video and display it
-        #     seconds = round(frame_id.cpu().numpy()[0] * self.N / self.fps)
+        #     seconds = round(frame_id.cpu().numpy()[0] * kwargs.get("sampleRatio") / self.fps)
         #     # display(HTML(f"Found at {str(datetime.timedelta(seconds=seconds))} (<a target=\"_blank\" href=\"{video_url}&t={seconds}\">link</a>)"))
 
         return timeframes
@@ -159,8 +158,8 @@ class Clipsearch(ClamsApp):
     def _annotate(self, mmif: Union[str, dict, Mmif], **kwargs) -> Mmif:
         # load file location from mmif
         video_filename = mmif.get_document_location(DocumentTypes.VideoDocument)
-        config = self.get_configuration(**kwargs)
-        unit = config["timeUnit"]
+        # config = self.get_configuration(**kwargs)
+        unit = kwargs.get("timeUnit")
         new_view: View = mmif.new_view()
         self.sign_view(new_view, config)
         new_view.new_contain(
@@ -168,9 +167,7 @@ class Clipsearch(ClamsApp):
             timeUnit=unit,
             document=mmif.get_documents_by_type(DocumentTypes.VideoDocument)[0].id,
         )
-        threshold = 95
-        query = None
-        timeframes = self.search_video(query, threshold)
+        timeframes = self.search_video(**kwargs)
 
         if unit == "milliseconds":
             for timeframe in timeframes:
