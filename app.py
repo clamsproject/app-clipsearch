@@ -27,6 +27,7 @@ class Clipsearch(ClamsApp):
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
         self.fps: float = 0.0
         self.debug = True
+        self.tuning = True
 
     def _appmetadata(self):
         # see https://sdk.clams.ai/autodoc/clams.app.html#clams.app.ClamsApp._load_appmetadata
@@ -128,6 +129,14 @@ class Clipsearch(ClamsApp):
 
             if self.debug:
                 print(similarities)
+
+            if self.tuning:
+                sorted_indices = np.argsort(similarities)[
+                                 ::-1]  # Get indices of sorted similarities, in descending order
+                top_10_scores = similarities[sorted_indices[:10]]
+                average_score = np.mean(similarities)
+                variance_score = np.var(similarities)
+                print(f"Highest scores: {top_10_scores}\nAverage score: {average_score}\nVariance: {variance_score}")
 
             # Find the frames that meet the threshold
             above_threshold_indices = np.where(similarities > threshold)[0]
