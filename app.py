@@ -26,6 +26,7 @@ class Clipsearch(ClamsApp):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
         self.fps: float = 0.0
+        self.debug = True
 
     def _appmetadata(self):
         # see https://sdk.clams.ai/autodoc/clams.app.html#clams.app.ClamsApp._load_appmetadata
@@ -60,6 +61,10 @@ class Clipsearch(ClamsApp):
             # Skip N frames
             current_frame += kwargs.get("sampleRatio")
             capture.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
+
+            if self.debug:
+                if len(video_frames) > 900:
+                    break
 
         # Print some statistics
         print(f"Frames extracted: {len(video_frames)}")
@@ -182,9 +187,10 @@ class Clipsearch(ClamsApp):
         else:
             for timeframe in timeframes:
                 timeframe_annotation: Annotation = new_view.new_annotation(AnnotationTypes.TimeFrame)
-                timeframe_annotation.add_property("start", timeframe["start_frame"])
-                timeframe_annotation.add_property("end", timeframe["end_frame"])
+                timeframe_annotation.add_property("start", int(timeframe["start_frame"]))
+                timeframe_annotation.add_property("end", int(timeframe["end_frame"]))
                 timeframe_annotation.add_property("unit", "frames")
+        return mmif
 
 
 if __name__ == "__main__":
