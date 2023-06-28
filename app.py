@@ -108,16 +108,18 @@ class Clipsearch(ClamsApp):
         # Check if "query" is in kwargs, and it's a string
         if "query" not in kwargs or not isinstance(kwargs["query"], str):
             raise ValueError('Invalid query')
+        query = kwargs.get("query").replace('+', ' ')
         # Encode and normalize the search query using CLIP
         with torch.no_grad():
-            text_features = self.model.encode_text(clip.tokenize(kwargs.get("query")).to(self.device))
+            text_features = self.model.encode_text(clip.tokenize(query).to(self.device))
             text_features /= text_features.norm(dim=-1, keepdim=True)
 
         video_features, video_frames = self.encode_frames(**kwargs)
-        threshold = 0.9 if "threshold" not in kwargs else float(kwargs["threshold"])
+        threshold = .32 if "threshold" not in kwargs else float(kwargs["threshold"])
 
         # Compute the similarity between the search query and each frame using the Cosine similarity
-        similarities = (100.0 * video_features @ text_features.T).squeeze().cpu().numpy()
+        similarities = (video_features @ text_features.T).squeeze().cpu().numpy()
+        print(similarities)
 
         # Find the frames that meet the threshold
         above_threshold_indices = np.where(similarities > threshold)[0]
