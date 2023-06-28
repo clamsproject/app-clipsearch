@@ -34,7 +34,7 @@ class Clipsearch(ClamsApp):
         # When using the ``metadata.py`` leave this do-nothing "pass" method here. 
         pass
 
-    def extract_frames(self, **kwargs) -> List[Image.Image]:
+    def extract_frames(self, video_filename, **kwargs) -> List[Image.Image]:
         """
         Extracts every N-th frame of the video
         :return: List of PIL images for CLIP
@@ -43,8 +43,7 @@ class Clipsearch(ClamsApp):
         video_frames = []
 
         # Open the video file
-        video_path = config["video_path"]
-        capture = cv2.VideoCapture(video_path)
+        capture = cv2.VideoCapture(video_filename)
         self.fps = capture.get(cv2.CAP_PROP_FPS)
 
         current_frame = 0
@@ -70,10 +69,10 @@ class Clipsearch(ClamsApp):
         print(f"Frames extracted: {len(video_frames)}")
         return video_frames
 
-    def encode_frames(self, **kwargs):
+    def encode_frames(self, video_filename, **kwargs):
         # You can try tuning the batch size for very large videos, but it should usually be OK
         batch_size = 256
-        video_frames = self.extract_frames(**kwargs)
+        video_frames = self.extract_frames(video_filename, **kwargs)
         batches = math.ceil(len(video_frames) / batch_size)
 
         # The encoded features will bs stored in video_features
@@ -104,7 +103,7 @@ class Clipsearch(ClamsApp):
     def frame_to_time(self, frame_number):
         return frame_number / self.fps
 
-    def search_video(self, **kwargs):
+    def search_video(self, video_filename, **kwargs):
         # Check if "query" is in kwargs, and it's a string
         if "query" not in kwargs or not isinstance(kwargs["query"], str):
             raise ValueError('Invalid query')
@@ -113,7 +112,7 @@ class Clipsearch(ClamsApp):
         queries = [query.replace('+', ' ') for query in queries]
 
         threshold = .30 if "threshold" not in kwargs else float(kwargs["threshold"])
-        video_features, video_frames = self.encode_frames(**kwargs)
+        video_features, video_frames = self.encode_frames(video_filename, **kwargs)
 
         all_timeframes = []
 
@@ -125,7 +124,9 @@ class Clipsearch(ClamsApp):
 
             # Compute the similarity between the search query and each frame using the Cosine similarity
             similarities = (video_features @ text_features.T).squeeze().cpu().numpy()
-            print(similarities)
+
+            if self.debug:
+                print(similarities)
 
             # Find the frames that meet the threshold
             above_threshold_indices = np.where(similarities > threshold)[0]
@@ -162,7 +163,7 @@ class Clipsearch(ClamsApp):
             timeUnit=unit,
             document=mmif.get_documents_by_type(DocumentTypes.VideoDocument)[0].id,
         )
-        timeframes = self.search_video(**kwargs)
+        timeframes = self.search_video(video_filename, **kwargs)
 
         if unit == "milliseconds":
             for timeframe in timeframes:
