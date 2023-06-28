@@ -1,2 +1,10 @@
 # Make sure clams-python version is explicitly specified, at least the lower bound
 clams-python==1.0.3
+
+opencv-python~=4.7.0.72
+clip~=1.0
+torch~=2.0.1
+numpy~=1.24.4
+plotly~=4.14.3
+pillow~=9.5.0
+ipython~=8.12.2
