@@ -115,7 +115,7 @@ class Clipsearch(ClamsApp):
             text_features /= text_features.norm(dim=-1, keepdim=True)
 
         video_features, video_frames = self.encode_frames(**kwargs)
-        threshold = .32 if "threshold" not in kwargs else float(kwargs["threshold"])
+        threshold = .30 if "threshold" not in kwargs else float(kwargs["threshold"])
 
         # Compute the similarity between the search query and each frame using the Cosine similarity
         similarities = (video_features @ text_features.T).squeeze().cpu().numpy()
