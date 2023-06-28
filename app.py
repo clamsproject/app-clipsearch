@@ -45,6 +45,8 @@ class Clipsearch(ClamsApp):
         # Open the video file
         capture = cv2.VideoCapture(video_filename)
         self.fps = capture.get(cv2.CAP_PROP_FPS)
+        if self.debug:
+            print(f"fps: {self.fps}")
 
         current_frame = 0
         while capture.isOpened():
@@ -61,9 +63,8 @@ class Clipsearch(ClamsApp):
             current_frame += kwargs.get("sampleRatio")
             capture.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
 
-            if self.debug:
-                if len(video_frames) > 900:
-                    break
+            if self.debug and len(video_frames) > 900:
+                break
 
         # Print some statistics
         print(f"Frames extracted: {len(video_frames)}")
@@ -153,7 +154,9 @@ class Clipsearch(ClamsApp):
 
     def _annotate(self, mmif: Union[str, dict, Mmif], **kwargs) -> Mmif:
         # load file location from mmif
-        video_filename = mmif.get_document_location(DocumentTypes.VideoDocument)
+        video_filename = mmif.get_document_location(DocumentTypes.VideoDocument)[7:]
+        if self.debug:
+            print(f"debugging with {video_filename}")
         # config = self.get_configuration(**kwargs)
         unit = kwargs.get("timeUnit")
         new_view: View = mmif.new_view()
