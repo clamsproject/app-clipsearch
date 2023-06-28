@@ -13,10 +13,10 @@ import clip
 import torch
 import math
 import numpy as np
-import plotly.express as px
-import datetime
-from IPython.core.display import HTML
-from IPython.core.display_functions import display
+# import plotly.express as px
+# import datetime
+# from IPython.core.display import HTML
+# from IPython.core.display_functions import display
 
 
 class Clipsearch(ClamsApp):
@@ -33,7 +33,7 @@ class Clipsearch(ClamsApp):
         # When using the ``metadata.py`` leave this do-nothing "pass" method here. 
         pass
 
-    def extract_frames(self, **kwargs) -> List[Image]:
+    def extract_frames(self, **kwargs) -> List[Image.Image]:
         """
         Extracts every N-th frame of the video
         :return: List of PIL images for CLIP
@@ -100,18 +100,22 @@ class Clipsearch(ClamsApp):
         return frame_number / self.fps
 
     def search_video(self, **kwargs):
+        # Check if "query" is in kwargs, and it's a string
+        if "query" not in kwargs or not isinstance(kwargs["query"], str):
+            raise ValueError('Invalid query')
         # Encode and normalize the search query using CLIP
         with torch.no_grad():
-            text_features = self.model.encode_text(clip.tokenize(kwargs.get("search_query")).to(self.device))
+            text_features = self.model.encode_text(clip.tokenize(kwargs.get("query")).to(self.device))
             text_features /= text_features.norm(dim=-1, keepdim=True)
 
         video_features, video_frames = self.encode_frames(**kwargs)
+        threshold = 0.9 if "threshold" not in kwargs else float(kwargs["threshold"])
 
         # Compute the similarity between the search query and each frame using the Cosine similarity
         similarities = (100.0 * video_features @ text_features.T).squeeze().cpu().numpy()
 
         # Find the frames that meet the threshold
-        above_threshold_indices = np.where(similarities > kwargs.get("threshold"))[0]
+        above_threshold_indices = np.where(similarities > threshold)[0]
 
         timeframes = []
 
