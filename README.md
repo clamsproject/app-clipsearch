@@ -1,37 +1,45 @@
-# BURN AFTER READING
+# app-clipsearch
 
-Delete this section of the document once the app development is done, before publishing the repository. 
+This repository provides a wrapper for using CLIP embeddings to search for video content with text prompts
 
----
-This skeleton code is a scaffolding for Python-based CLAMS app development. Specifically, it contains 
+## Requirements
 
-1. `app.py` and `metadata.py` to write the app 
-1. `requirements.txt` to specify python dependencies
-1. `Containerfile` to containerize the app and specify system dependencies
-1. `.gitignore` and `.dorckrignore` files listing commonly ignored files
-1. an empty `LICENSE` file to replace with an actual license information of the app
-1. `CLAMS-generic-readme.md` file with basic instructions of app installation and execution
-1. This `README.md` file for additional information not specified in the generic readme file. 
-1. A number of GitHub Actions workflows for issue/bug-report management 
-1. A GHA workflow to publish app images upon any push of a git tag
-   * **NOTE**: All GHA workflows included are designed to only work in repositories under `clamsproject` organization.
+Generally, an CLAMS app requires 
 
-Before pushing your first commit, please make sure to delete this section of the document.
+- Python3 with the `clams-python` module installed; to run the app locally. 
+- `docker`; to run the app in a Docker container (as a HTTP server).
+- A HTTP client utility (such as `curl`); to invoke and execute analysis.
 
-Then use the following section to document any additional information specific to this app. If your app works significantly different from what's described in the generic readme file, be as specific as possible. 
+## Building and running the Docker image
 
----
+From the project directory, run the following in your terminal to build the Docker image from the included Dockerfile:
 
-## User instruction
+```bash
+docker build . -f Dockerfile -t <app_name>
+```
 
-General user instruction for CLAMS apps is available at [CLAMS Apps documentation](https://apps.clams.ai/clamsapp/).
+Alternatively, the app maybe already be available on docker hub. 
 
-Below is a list of additional information specific to this app.
+``` bash 
+docker pull <app_name>
+```
 
-### System requirments
+Then to create a Docker container using that image, run:
 
-(Any system-level software required to run this app)
+```bash
+docker run -v /path/to/data/directory:/data -p <port>:5000 <app_name>
+```
 
-### Configurable runtime parameter
+where /path/to/data/directory is the location of your media files or MMIF objects and <port> is the *host* port number you want your container to be listening to. The HTTP inside the container will be listening to 5000 by default. 
 
-(Parameters should be already well-described in the app metadata. But you can use this space to show examples, for instance.)
+## Invoking the app
+Once the app is running as a HTTP server, to invoke the app and get automatic annotations, simply send a POST request to the app with a MMIF input as request body.
+
+MMIF input files can be obtained from outputs of other CLAMS apps, or you can create an empty MMIF only with source media locations using `clams source` command. See the help message for a more detailed instructions. 
+
+```bash
+clams source --help
+```
+
+(Make sure you installed the same `clams-python` package version specified in the [`requirements.txt`](requirements.txt).)
+
