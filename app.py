@@ -108,63 +108,47 @@ class Clipsearch(ClamsApp):
         # Check if "query" is in kwargs, and it's a string
         if "query" not in kwargs or not isinstance(kwargs["query"], str):
             raise ValueError('Invalid query')
-        query = kwargs.get("query").replace('+', ' ')
-        # Encode and normalize the search query using CLIP
-        with torch.no_grad():
-            text_features = self.model.encode_text(clip.tokenize(query).to(self.device))
-            text_features /= text_features.norm(dim=-1, keepdim=True)
 
-        video_features, video_frames = self.encode_frames(**kwargs)
+        queries = kwargs.get("query").split('*')
+        queries = [query.replace('+', ' ') for query in queries]
+
         threshold = .30 if "threshold" not in kwargs else float(kwargs["threshold"])
+        video_features, video_frames = self.encode_frames(**kwargs)
 
-        # Compute the similarity between the search query and each frame using the Cosine similarity
-        similarities = (video_features @ text_features.T).squeeze().cpu().numpy()
-        print(similarities)
+        all_timeframes = []
 
-        # Find the frames that meet the threshold
-        above_threshold_indices = np.where(similarities > threshold)[0]
+        # Encode and normalize each search query using CLIP then search
+        for query in queries:
+            with torch.no_grad():
+                text_features = self.model.encode_text(clip.tokenize(query).to(self.device))
+                text_features /= text_features.norm(dim=-1, keepdim=True)
 
-        timeframes = []
+            # Compute the similarity between the search query and each frame using the Cosine similarity
+            similarities = (video_features @ text_features.T).squeeze().cpu().numpy()
+            print(similarities)
 
-        if len(above_threshold_indices) > 0:
-            # Find the contiguous regions of frames above the threshold
-            contiguous_regions = np.split(above_threshold_indices,
-                                          np.where(np.diff(above_threshold_indices) != 1)[0] + 1)
+            # Find the frames that meet the threshold
+            above_threshold_indices = np.where(similarities > threshold)[0]
 
-            # For each contiguous region, find the start and end times
-            for region in contiguous_regions:
-                start_frame, end_frame = region[0], region[-1]
-                start_time = self.frame_to_time(start_frame)
-                end_time = self.frame_to_time(end_frame)
+            timeframes = []
 
-                timeframe = {'start': start_time, 'end': end_time, 'start_frame': start_frame, 'end_frame': end_frame}
-                timeframes.append(timeframe)
+            if len(above_threshold_indices) > 0:
+                # Find the contiguous regions of frames above the threshold
+                contiguous_regions = np.split(above_threshold_indices,
+                                              np.where(np.diff(above_threshold_indices) != 1)[0] + 1)
 
-        # At this point, `timeframes` is a list of tuples (start_time, end_time) representing
-        # the timeframes where the similarity score is above the threshold.
+                # For each contiguous region find the start and end times
+                for region in contiguous_regions:
+                    start_frame, end_frame = region[0], region[-1]
+                    start_time = self.frame_to_time(start_frame)
+                    end_time = self.frame_to_time(end_frame)
 
-        # values, best_photo_idx = similarities.topk(display_results_count, dim=0)
+                    timeframe = {'query': query, 'start': start_time, 'end': end_time, 'start_frame': start_frame,
+                                 'end_frame': end_frame}
+                    timeframes.append(timeframe)
 
-        # Display the heatmap
-        # if display_heatmap:
-        #     print("Search query heatmap over the frames of the video:")
-        #     fig = px.imshow(similarities.T.cpu().numpy(), height=50, aspect='auto', color_continuous_scale='viridis')
-        #     fig.update_layout(coloraxis_showscale=False)
-        #     fig.update_xaxes(showticklabels=False)
-        #     fig.update_yaxes(showticklabels=False)
-        #     fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
-        #     fig.show()
-        #     print()
-
-        # # Display the top 3 frames
-        # for frame_id in best_photo_idx:
-        #     display(video_frames[frame_id])
-        #
-        #     # Find the timestamp in the video and display it
-        #     seconds = round(frame_id.cpu().numpy()[0] * kwargs.get("sampleRatio") / self.fps)
-        #     # display(HTML(f"Found at {str(datetime.timedelta(seconds=seconds))} (<a target=\"_blank\" href=\"{video_url}&t={seconds}\">link</a>)"))
-
-        return timeframes
+            all_timeframes.extend(timeframes)
+        return all_timeframes
 
     def _annotate(self, mmif: Union[str, dict, Mmif], **kwargs) -> Mmif:
         # load file location from mmif
@@ -186,12 +170,14 @@ class Clipsearch(ClamsApp):
                 timeframe_annotation.add_property("start", timeframe["start"])
                 timeframe_annotation.add_property("end", timeframe["end"])
                 timeframe_annotation.add_property("unit", unit)
+                timeframe_annotation.add_property("query", timeframe["query"])
         else:
             for timeframe in timeframes:
                 timeframe_annotation: Annotation = new_view.new_annotation(AnnotationTypes.TimeFrame)
                 timeframe_annotation.add_property("start", int(timeframe["start_frame"]))
                 timeframe_annotation.add_property("end", int(timeframe["end_frame"]))
                 timeframe_annotation.add_property("unit", "frames")
+                timeframe_annotation.add_property("query", timeframe["query"])
         return mmif
 
 
