@@ -154,7 +154,7 @@ class Clipsearch(ClamsApp):
 
     def _annotate(self, mmif: Union[str, dict, Mmif], **kwargs) -> Mmif:
         # load file location from mmif
-        video_filename = mmif.get_document_location(DocumentTypes.VideoDocument)[7:]
+        video_filename = mmif.get_document_location(DocumentTypes.VideoDocument)
         if self.debug:
             print(f"debugging with {video_filename}")
         # config = self.get_configuration(**kwargs)
