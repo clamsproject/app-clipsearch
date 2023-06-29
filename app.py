@@ -115,7 +115,7 @@ class Clipsearch(ClamsApp):
         :param frame_number:
         :return:
         """
-        return frame_number * self.sampleRatio / self.fps
+        return 1000 * frame_number * self.sampleRatio / self.fps
 
     def search_video(self, video_filename, **kwargs):
         """
