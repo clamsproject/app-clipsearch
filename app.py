@@ -37,7 +37,7 @@ class Clipsearch(ClamsApp):
 
     def extract_frames(self, video_filename, **kwargs) -> List[Image.Image]:
         """
-        Extracts every N-th frame of the video
+        Extracts frames from the video at specified sampleRatio
         :return: List of PIL images for CLIP
         """
         # The frame images will be stored in video_frames
@@ -60,7 +60,7 @@ class Clipsearch(ClamsApp):
             else:
                 break
 
-            # Skip N frames
+            # Skip sampleRatio frames
             current_frame += kwargs.get("sampleRatio")
             capture.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
 
@@ -72,6 +72,12 @@ class Clipsearch(ClamsApp):
         return video_frames
 
     def encode_frames(self, video_filename, **kwargs):
+        """
+        Creates torch tensors of video features encoding frames with CLIP and normalizing
+        :param video_filename:
+        :param kwargs:
+        :return:
+        """
         # You can try tuning the batch size for very large videos, but it should usually be OK
         batch_size = 256
         video_frames = self.extract_frames(video_filename, **kwargs)
@@ -103,9 +109,21 @@ class Clipsearch(ClamsApp):
         return video_features, video_frames
 
     def frame_to_time(self, frame_number):
+        """
+        Converts frames to seconds for time-based annotations
+        :param frame_number:
+        :return:
+        """
         return frame_number / self.fps
 
     def search_video(self, video_filename, **kwargs):
+        """
+        Encodes and normalizes text from search queries then calculates similarity scores between queries and
+        images.
+        :param video_filename:
+        :param kwargs:
+        :return: List
+        """
         # Check if "query" is in kwargs, and it's a string
         if "query" not in kwargs or not isinstance(kwargs["query"], str):
             raise ValueError('Invalid query')
@@ -131,8 +149,8 @@ class Clipsearch(ClamsApp):
                 print(similarities)
 
             if self.tuning:
-                sorted_indices = np.argsort(similarities)[
-                                 ::-1]  # Get indices of sorted similarities, in descending order
+                # Get indices of sorted similarities, in descending order
+                sorted_indices = np.argsort(similarities)[::-1]
                 top_10_scores = similarities[sorted_indices[:10]]
                 average_score = np.mean(similarities)
                 variance_score = np.var(similarities)
