@@ -39,7 +39,7 @@ def appmetadata() -> AppMetadata:
                            type='integer', default='10')
     metadata.add_parameter(name='threshold', type='number', default='.9',
                            description='Threshold from 0-1, lower accepts more potential labels.')
-    metadata.add_parameter(name='query', description='Query for search', type='string',)
+    metadata.add_parameter(name='query', description='Query for search', type='string')
     
     return metadata
 

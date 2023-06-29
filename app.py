@@ -128,6 +128,7 @@ class Clipsearch(ClamsApp):
         if "query" not in kwargs or not isinstance(kwargs["query"], str):
             raise ValueError('Invalid query')
 
+        # queries = kwargs.get("query")
         queries = kwargs.get("query").split('*')
         queries = [query.replace('+', ' ') for query in queries]
 
@@ -146,15 +147,17 @@ class Clipsearch(ClamsApp):
             similarities = (video_features @ text_features.T).squeeze().cpu().numpy()
 
             if self.debug:
-                print(similarities)
+                # print(similarities)
+                pass
 
             if self.tuning:
                 # Get indices of sorted similarities, in descending order
                 sorted_indices = np.argsort(similarities)[::-1]
                 top_10_scores = similarities[sorted_indices[:10]]
                 average_score = np.mean(similarities)
-                variance_score = np.var(similarities)
-                print(f"Highest scores: {top_10_scores}\nAverage score: {average_score}\nVariance: {variance_score}")
+                standard_dev = np.std(similarities)
+                print(f"{query} stats:\nHighest scores: {top_10_scores}\nAverage score: {average_score}"
+                      f"\nStandard Deviation: {standard_dev}")
 
             # Find the frames that meet the threshold
             above_threshold_indices = np.where(similarities > threshold)[0]
@@ -184,8 +187,8 @@ class Clipsearch(ClamsApp):
         video_filename = mmif.get_document_location(DocumentTypes.VideoDocument)
         if self.debug:
             print(f"debugging with {video_filename}")
-        # config = self.get_configuration(**kwargs)
-        unit = kwargs.get("timeUnit")
+        config = self.get_configuration(**kwargs)
+        unit = config.get("timeUnit")
         new_view: View = mmif.new_view()
         self.sign_view(new_view, config)
         new_view.new_contain(
