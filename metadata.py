@@ -36,7 +36,7 @@ def appmetadata() -> AppMetadata:
     metadata.add_parameter(name='timeUnit', description='Unit for output timeframe',
                            type='string', default='milliseconds', choices=['frames', 'milliseconds'])
     metadata.add_parameter(name='sampleRatio', description='Frequency to sample frames.',
-                           type='integer', default='10')
+                           type='integer', default='15')
     metadata.add_parameter(name='threshold', type='number', default='.9',
                            description='Threshold from 0-1, lower accepts more potential labels.')
     metadata.add_parameter(name='query', description='Query for search', type='string')
