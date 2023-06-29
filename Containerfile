@@ -24,6 +24,9 @@ ENV CLAMS_APP_VERSION ${CLAMS_APP_VERSION}
 COPY ./ /app
 WORKDIR /app
 RUN pip3 install -r requirements.txt
+ADD https://github.com/openai/CLIP/archive/a9b1bf5920416aaeaec965c25dd9e8f98c864f16.tar.gz /clip.tar.gz
+RUN tar -x -z -f /clip.tar.gz -C /
+RUN pip install /CLIP-a9b1bf5920416aaeaec965c25dd9e8f98c864f16
 
 # default command to run the CLAMS app in a production server 
 CMD ["python3", "app.py", "--production"]
