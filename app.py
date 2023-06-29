@@ -26,6 +26,7 @@ class Clipsearch(ClamsApp):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
         self.fps: float = 0.0
+        self.sampleRatio: int = 0
         self.debug = True
         self.tuning = True
 
@@ -114,7 +115,7 @@ class Clipsearch(ClamsApp):
         :param frame_number:
         :return:
         """
-        return frame_number / self.fps
+        return frame_number * self.sampleRatio / self.fps
 
     def search_video(self, video_filename, **kwargs):
         """
@@ -156,7 +157,7 @@ class Clipsearch(ClamsApp):
                 top_10_scores = similarities[sorted_indices[:10]]
                 average_score = np.mean(similarities)
                 standard_dev = np.std(similarities)
-                print(f"{query} stats:\nHighest scores: {top_10_scores}\nAverage score: {average_score}"
+                print(f"\n{query} stats:\nHighest scores: {top_10_scores}\nAverage score: {average_score}"
                       f"\nStandard Deviation: {standard_dev}")
 
             # Find the frames that meet the threshold
@@ -189,6 +190,7 @@ class Clipsearch(ClamsApp):
             print(f"debugging with {video_filename}")
         config = self.get_configuration(**kwargs)
         unit = config.get("timeUnit")
+        self.sampleRatio = config.get("sampleRatio")
         new_view: View = mmif.new_view()
         self.sign_view(new_view, config)
         new_view.new_contain(
