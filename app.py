@@ -125,12 +125,10 @@ class Clipsearch(ClamsApp):
         :param kwargs:
         :return: List
         """
-        # Check if "query" is in kwargs, and it's a string
-        if "query" not in kwargs or not isinstance(kwargs["query"], str):
-            raise ValueError('Invalid query')
+        # if "query" not in kwargs or not isinstance(kwargs["query"], str):
+        #     raise ValueError('Invalid query')
 
-        # queries = kwargs.get("query")
-        queries = kwargs.get("query").split('*')
+        queries = kwargs.get("query")
         queries = [query.replace('+', ' ') for query in queries]
 
         threshold = .30 if "threshold" not in kwargs else float(kwargs["threshold"])
