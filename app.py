@@ -128,8 +128,19 @@ class Clipsearch(ClamsApp):
         # if "query" not in kwargs or not isinstance(kwargs["query"], str):
         #     raise ValueError('Invalid query')
 
-        queries = kwargs.get("query")
-        queries = [query.replace('+', ' ') for query in queries]
+        input_queries = kwargs.get("query")
+        input_queries = [query.replace('+', ' ') for query in input_queries]
+
+        query_to_label = {}
+        queries = []
+
+        for item in input_queries:
+            query, label = item.split("@")
+            query_to_label[query] = label
+            queries.append(query)
+
+        print("Dictionary: ", query_to_label)
+        print("List: ", queries)
 
         threshold = .30 if "threshold" not in kwargs else float(kwargs["threshold"])
         video_features, video_frames = self.encode_frames(video_filename, **kwargs)
@@ -174,8 +185,8 @@ class Clipsearch(ClamsApp):
                     start_time = self.frame_to_time(start_frame)
                     end_time = self.frame_to_time(end_frame)
 
-                    timeframe = {'query': query, 'start': start_time, 'end': end_time, 'start_frame': start_frame,
-                                 'end_frame': end_frame}
+                    timeframe = {'label': query_to_label[query], 'start': start_time, 'end': end_time,
+                                 'start_frame': start_frame, 'end_frame': end_frame}
                     timeframes.append(timeframe)
 
             all_timeframes.extend(timeframes)
@@ -204,14 +215,14 @@ class Clipsearch(ClamsApp):
                 timeframe_annotation.add_property("start", timeframe["start"])
                 timeframe_annotation.add_property("end", timeframe["end"])
                 timeframe_annotation.add_property("unit", unit)
-                timeframe_annotation.add_property("query", timeframe["query"])
+                timeframe_annotation.add_property("label", timeframe["label"])
         else:
             for timeframe in timeframes:
                 timeframe_annotation: Annotation = new_view.new_annotation(AnnotationTypes.TimeFrame)
                 timeframe_annotation.add_property("start", int(timeframe["start_frame"]))
                 timeframe_annotation.add_property("end", int(timeframe["end_frame"]))
                 timeframe_annotation.add_property("unit", "frames")
-                timeframe_annotation.add_property("query", timeframe["query"])
+                timeframe_annotation.add_property("label", timeframe["label"])
         return mmif
 
 
