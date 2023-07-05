@@ -123,11 +123,8 @@ class Clipsearch(ClamsApp):
         images.
         :param video_filename:
         :param kwargs:
-        :return: List
+        :return: List of timeframes with labels from queries
         """
-        # if "query" not in kwargs or not isinstance(kwargs["query"], str):
-        #     raise ValueError('Invalid query')
-
         input_queries = kwargs.get("query")
         input_queries = [query.replace('+', ' ') for query in input_queries]
 
@@ -138,9 +135,6 @@ class Clipsearch(ClamsApp):
             query, label = item.split("@")
             query_to_label[query] = label
             queries.append(query)
-
-        print("Dictionary: ", query_to_label)
-        print("List: ", queries)
 
         threshold = .30 if "threshold" not in kwargs else float(kwargs["threshold"])
         video_features, video_frames = self.encode_frames(video_filename, **kwargs)
@@ -155,10 +149,6 @@ class Clipsearch(ClamsApp):
 
             # Compute the similarity between the search query and each frame using the Cosine similarity
             similarities = (video_features @ text_features.T).squeeze().cpu().numpy()
-
-            if self.debug:
-                # print(similarities)
-                pass
 
             if self.tuning:
                 # Get indices of sorted similarities, in descending order
