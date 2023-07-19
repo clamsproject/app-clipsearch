@@ -34,7 +34,7 @@ def appmetadata() -> AppMetadata:
     metadata.add_output(AnnotationTypes.TimeFrame, frameType='string')
 
     metadata.add_parameter(name='timeUnit', description='Unit for output timeframe',
-                           type='string', default='milliseconds', choices=['frames', 'milliseconds'])
+                           type='string', default='frames', choices=['frames', 'milliseconds'])
     metadata.add_parameter(name='sampleRatio', description='Frequency to sample frames.',
                            type='integer', default='30')
     metadata.add_parameter(name='threshold', type='number', default='.9',
