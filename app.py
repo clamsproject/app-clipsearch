@@ -6,6 +6,7 @@ from config import config
 # mostly likely you'll need these modules/classes
 from clams import ClamsApp, Restifier
 from mmif import Mmif, View, Annotation, Document, AnnotationTypes, DocumentTypes
+from mmif.utils import video_document_helper as vdh
 
 import cv2
 from PIL import Image
@@ -13,6 +14,8 @@ import clip
 import torch
 import math
 import numpy as np
+
+
 # import plotly.express as px
 # import datetime
 # from IPython.core.display import HTML
@@ -36,52 +39,17 @@ class Clipsearch(ClamsApp):
         # When using the ``metadata.py`` leave this do-nothing "pass" method here. 
         pass
 
-    def extract_frames(self, video_filename, **kwargs) -> List[Image.Image]:
-        """
-        Extracts frames from the video at specified sampleRatio
-        :return: List of PIL images for CLIP
-        """
-        # The frame images will be stored in video_frames
-        video_frames = []
-
-        # Open the video file
-        capture = cv2.VideoCapture(video_filename)
-        self.fps = capture.get(cv2.CAP_PROP_FPS)
-        if self.debug:
-            print(f"fps: {self.fps}")
-
-        current_frame = 0
-        while capture.isOpened():
-            # Read the current frame
-            ret, frame = capture.read()
-
-            # Convert it to a PIL image (required for CLIP) and store it
-            if ret:
-                video_frames.append(Image.fromarray(frame[:, :, ::-1]))
-            else:
-                break
-
-            # Skip sampleRatio frames
-            current_frame += self.sampleRatio
-            capture.set(cv2.CAP_PROP_POS_FRAMES, current_frame)
-
-            if self.debug and len(video_frames) > 900:
-                break
-
-        # Print some statistics
-        print(f"Frames extracted: {len(video_frames)}")
-        return video_frames
-
-    def encode_frames(self, video_filename, **kwargs):
+    def encode_frames(self, video_doc: Document, sample: List[int]):
         """
         Creates torch tensors of video features encoding frames with CLIP and normalizing
-        :param video_filename:
-        :param kwargs:
+        :param video_doc: video document
+        :param sample: list of frames to sample
         :return:
         """
         # You can try tuning the batch size for very large videos, but it should usually be OK
         batch_size = 256
-        video_frames = self.extract_frames(video_filename, **kwargs)
+
+        video_frames = vdh.extract_frames_as_images(video_doc, sample, as_PIL=True)
         batches = math.ceil(len(video_frames) / batch_size)
 
         # The encoded features will bs stored in video_features
@@ -109,19 +77,12 @@ class Clipsearch(ClamsApp):
         print(f"Features: {video_features.shape}")
         return video_features, video_frames
 
-    def frame_to_time(self, frame_number):
-        """
-        Converts frames to seconds for time-based annotations
-        :param frame_number:
-        :return:
-        """
-        return 1000 * frame_number * self.sampleRatio / self.fps
-
-    def search_video(self, video_filename, **kwargs):
+    def search_video(self, video_doc: Document, sample, **kwargs):
         """
         Encodes and normalizes text from search queries then calculates similarity scores between queries and
         images.
-        :param video_filename:
+        :param video_doc: video document to search
+        :param sample: list of frames to sample
         :param kwargs:
         :return: List of timeframes with labels from queries
         """
@@ -137,7 +98,7 @@ class Clipsearch(ClamsApp):
             queries.append(query)
 
         threshold = .30 if "threshold" not in kwargs else float(kwargs["threshold"])
-        video_features, video_frames = self.encode_frames(video_filename, **kwargs)
+        video_features, video_frames = self.encode_frames(video_doc, sample)
 
         all_timeframes = []
 
@@ -172,8 +133,8 @@ class Clipsearch(ClamsApp):
                 # For each contiguous region find the start and end times
                 for region in contiguous_regions:
                     start_frame, end_frame = region[0], region[-1]
-                    start_time = self.frame_to_time(start_frame)
-                    end_time = self.frame_to_time(end_frame)
+                    start_time = vdh.convert(start_frame, "frames", "milliseconds", self.fps)
+                    end_time = vdh.convert(end_frame, "frames", "milliseconds", self.fps)
 
                     timeframe = {'label': query_to_label[query], 'start': start_time, 'end': end_time,
                                  'start_frame': start_frame, 'end_frame': end_frame}
@@ -183,22 +144,23 @@ class Clipsearch(ClamsApp):
         return all_timeframes
 
     def _annotate(self, mmif: Union[str, dict, Mmif], **kwargs) -> Mmif:
-        # load file location from mmif
-        video_filename = mmif.get_document_location(DocumentTypes.VideoDocument)
-        if self.debug:
-            print(f"debugging with {video_filename}")
+        video_doc = mmif.get_documents_by_type(DocumentTypes.VideoDocument)[0]
         config = self.get_configuration(**kwargs)
         unit = config.get("timeUnit")
         if "sampleRatio" in config:
             self.sampleRatio = int(config.get("sampleRatio"))
         new_view: View = mmif.new_view()
-        self.sign_view(new_view, config)
+        self.sign_view(new_view, kwargs)
         new_view.new_contain(
             AnnotationTypes.TimeFrame,
             timeUnit=unit,
             document=mmif.get_documents_by_type(DocumentTypes.VideoDocument)[0].id,
         )
-        timeframes = self.search_video(video_filename, **kwargs)
+
+        vid = vdh.capture(video_doc)
+        last_frame = int(vid.get(cv2.CAP_PROP_FRAME_COUNT) - 1)
+        sample = vdh.sample_frames(0, last_frame, self.sampleRatio)
+        timeframes = self.search_video(video_doc, sample, **kwargs)
 
         if unit == "milliseconds":
             for timeframe in timeframes:

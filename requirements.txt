@@ -1,5 +1,5 @@
 # Make sure clams-python version is explicitly specified, at least the lower bound
-clams-python==1.0.3
+clams-python==1.0.5
 
 opencv-python~=4.7.0.72
 torch~=2.0.1
