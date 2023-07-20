@@ -16,11 +16,6 @@ import math
 import numpy as np
 
 
-# import plotly.express as px
-# import datetime
-# from IPython.core.display import HTML
-# from IPython.core.display_functions import display
-
 
 class Clipsearch(ClamsApp):
 
@@ -158,6 +153,7 @@ class Clipsearch(ClamsApp):
         )
 
         vid = vdh.capture(video_doc)
+        self.fps = vdh.get_framerate(video_doc)
         last_frame = int(vid.get(cv2.CAP_PROP_FRAME_COUNT) - 1)
         sample = vdh.sample_frames(0, last_frame, self.sampleRatio)
         timeframes = self.search_video(video_doc, sample, **kwargs)
