@@ -12,3 +12,4 @@ numpy~=1.24.4
 plotly~=4.14.3
 pillow~=9.5.0
 ipython~=8.12.2
+clip @ git+https://github.com/openai/CLIP.git@a1d071733d7111c9c014f024669f959182114e33
