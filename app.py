@@ -162,19 +162,19 @@ class Clipsearch(ClamsApp):
         sample = vdh.sample_frames(0, last_frame, self.sampleRatio)
         timeframes = self.search_video(video_doc, sample, **kwargs)
 
-        if unit == "milliseconds":
-            for timeframe in timeframes:
-                timeframe_annotation: Annotation = new_view.new_annotation(AnnotationTypes.TimeFrame)
-                timeframe_annotation.add_property("start", timeframe["start"])
-                timeframe_annotation.add_property("end", timeframe["end"])
-                timeframe_annotation.add_property("unit", unit)
-                timeframe_annotation.add_property("label", timeframe["label"])
-        else:
+        if unit == "frames":
             for timeframe in timeframes:
                 timeframe_annotation: Annotation = new_view.new_annotation(AnnotationTypes.TimeFrame)
                 timeframe_annotation.add_property("start", int(timeframe["start_frame"]))
                 timeframe_annotation.add_property("end", int(timeframe["end_frame"]))
-                timeframe_annotation.add_property("unit", "frames")
+                timeframe_annotation.add_property("timeUnit", "frames")
+                timeframe_annotation.add_property("label", timeframe["label"])
+        else:
+            for timeframe in timeframes:
+                timeframe_annotation: Annotation = new_view.new_annotation(AnnotationTypes.TimeFrame)
+                timeframe_annotation.add_property("start", timeframe["start"])
+                timeframe_annotation.add_property("end", timeframe["end"])
+                timeframe_annotation.add_property("timeUnit", unit)
                 timeframe_annotation.add_property("label", timeframe["label"])
         return mmif
 
